@@ -1,0 +1,63 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L7 Digital Hub — Cart</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>.cart-wrap{max-width:520px;margin:8px auto 120px;padding:0 16px}.item{display:grid;grid-template-columns:84px 1fr auto;gap:12px;align-items:center;background:#fff;border:1px solid #eef2ff;border-radius:16px;box-shadow:var(--shadow);padding:10px}.item img{width:84px;height:84px;border-radius:12px;object-fit:cover}.qty{display:flex;gap:8px;align-items:center}.qty button{width:28px;height:28px;border-radius:8px;border:1px solid #e5e7eb;background:#fff}.totals{margin-top:12px;background:#fff;border:1px solid #eef2ff;border-radius:16px;box-shadow:var(--shadow);padding:12px}.empty{padding:24px;text-align:center}.inline{display:flex;justify-content:space-between;margin:6px 0}</style>
+  </head>
+  <body>
+  <header class="appbar"><div class="brandline">
+    <a class="logo" href="index.html">L7</a><div><div class="title">Your Cart</div><div class="subtitle">L7 Digital Hub</div></div>
+    <a class="iconbtn" style="margin-left:auto" href="index.html">🏠</a>
+  </div></header>
+  
+  <main class="cart-wrap">
+    <div id="cart-list"></div>
+    <div id="cart-totals" class="totals" style="display:none"></div>
+  </main>
+  
+  <nav class="bottom">
+    <a class="btab" href="index.html"><div class="ico">🏠</div>Home</a>
+    <a class="btab active" href="cart.html"><div class="ico">🛒</div>Cart</a>
+  </nav>
+  
+  <script src="assets/app.js"></script>
+  <script>
+    function draw(){
+      const listEl=document.getElementById('cart-list');
+      const totalsEl=document.getElementById('cart-totals');
+      const items=Cart.itemsDetailed();
+  
+      if(items.length===0){ listEl.innerHTML='<div class="empty hint">Your cart is empty.</div>'; totalsEl.style.display='none'; return; }
+  
+      listEl.innerHTML = items.map(it=>`
+        <div class="item">
+          <img src="${it.image}" alt="">
+          <div>
+            <div style="font-weight:700">${it.name}</div>
+            <div class="hint">₹${(it.price||0).toLocaleString()} each</div>
+            <div class="qty" style="margin-top:6px">
+              <button data-minus="${it.id}">−</button><span>${it.qty}</span><button data-plus="${it.id}">+</button>
+              <button data-remove="${it.id}" class="btn ghost" style="margin-left:10px">Remove</button>
+            </div>
+          </div>
+          <div style="text-align:right"><div class="price">₹${((it.price||0)*it.qty).toLocaleString()}</div></div>
+        </div>`).join('');
+  
+      const {subtotal,discount,total}=Cart.totals();
+      totalsEl.innerHTML = `
+        <div class="inline"><span>Subtotal</span><strong>₹${subtotal.toLocaleString()}</strong></div>
+        <div class="inline"><span>Discount (MRP diff)</span><strong>₹${discount.toLocaleString()}</strong></div>
+        <hr>
+        <div class="inline"><span>Total</span><strong>₹${total.toLocaleString()}</strong></div>
+        <button class="btn" style="width:100%;margin-top:10px" onclick="alert('Checkout coming soon')">Checkout</button>`;
+      totalsEl.style.display='block';
+      Cart.updateBadge();
+    }
+    document.addEventListener('click',(e)=>{
+      const m=e.target.getAttribute('data-minus'), p=e.target.getAttribute('data-plus'), r=e.target.getAttribute('data-remove');
+      if(m){ Cart.add(m,-1); draw(); } if(p){ Cart.add(p,1); draw(); } if(r){ Cart.remove(r); draw(); }
+    });
+    draw();
+  </script>
+  </body></html>
+  

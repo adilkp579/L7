@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L7 Digital Hub — Product</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>.prod-wrap{max-width:520px;margin:8px auto 96px;padding:0 16px}.hero{background:#fff;border:1px solid #eef2ff;border-radius:18px;box-shadow:var(--shadow);padding:12px}.hero img{width:100%;height:260px;object-fit:cover;border-radius:12px}.price-line{display:flex;gap:8px;margin:8px 0}.qty{display:flex;gap:10px;align-items:center;margin-top:10px}.qty button{width:36px;height:36px;border-radius:10px;border:1px solid #e5e7eb;background:#fff}</style>
+  </head>
+  <body>
+  <header class="appbar"><div class="brandline">
+    <a class="logo" href="index.html">L7</a>
+    <div><div class="title">Product</div><div class="subtitle">L7 Digital Hub</div></div>
+    <a class="iconbtn" style="margin-left:auto;position:relative" href="cart.html">🛒<span id="cart-badge" class="cart-badge" style="display:none">0</span></a>
+  </div></header>
+  
+  <main class="prod-wrap" id="root"></main>
+  
+ 
+  
+  <script src="assets/app.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    const app=initializeApp({apiKey:"AIzaSyC2tsSd3o7QkBu8dhYVLrvVsGUJxBhKQZk",authDomain:"l7-digital-hub.firebaseapp.com",projectId:"l7-digital-hub",storageBucket:"l7-digital-hub.firebasestorage.app",messagingSenderId:"103483875623",appId:"1:103483875623:web:4057e34f23edd51e02c902",measurementId:"G-X2CCL0YB6P"});
+    const db=getFirestore(app);
+  
+    const id=new URLSearchParams(location.search).get('id');
+    const root=document.getElementById('root');
+  
+    async function load(){
+      if(!id){ root.innerHTML='<div class="hint">No product id.</div>'; return; }
+      const snap=await getDoc(doc(db,'products',id));
+      if(!snap.exists()){ root.innerHTML='<div class="hint">Product not found.</div>'; return; }
+      const p={id:snap.id, ...snap.data()};
+      root.innerHTML=`
+        <div class="hero">
+          <img src="${p.image}" alt="">
+          <h2 style="margin:10px 0 4px">${p.name}</h2>
+          <div class="hint">Category: ${p.category} • ${p.condition||'new'}</div>
+          <div class="price-line"><span class="price">₹${(p.price||0).toLocaleString()}</span><span class="mrp">₹${(p.mrp||0).toLocaleString()}</span></div>
+          <div class="qty">
+            <button id="minus">−</button><span id="qval">1</span><button id="plus">+</button>
+          </div>
+          <button id="add" class="btn" style="width:100%;margin-top:12px">Add to Cart</button>
+        </div>`;
+      let q=1; const qval=()=>$('#qval').textContent=q;
+      $('#minus').onclick=()=>{if(q>1){q--;qval();}};
+      $('#plus').onclick=()=>{q++;qval();};
+      $('#add').onclick=()=>{ Cart.addWithDetails(p,q); alert('Added to cart'); };
+    }
+    load();
+  </script>
+  </body></html>
+  

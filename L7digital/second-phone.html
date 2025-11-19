@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L7 Digital Hub — Second Phones</title>
+    <link rel="stylesheet" href="assets/style.css">
+    </head>
+    <body>
+    <header class="appbar"><div class="brandline">
+      <a class="logo" href="index.html">L7</a><div><div class="title">Second Phones</div><div class="subtitle">Used & Refurbished</div></div>
+      <a class="iconbtn" style="margin-left:auto;position:relative" href="cart.html">🛒<span id="cart-badge" class="cart-badge" style="display:none">0</span></a>
+    </div></header>
+    
+    <nav class="cat-strip">
+      <a class="cat" data-key="mobile" href="mobile.html"><div class="bubble">📱</div><span>Mobile</span></a>
+      <a class="cat" data-key="for-you" href="index.html"><div class="bubble">🛍️</div><span>For You</span></a>
+    </nav>
+    
+    <main class="container">
+      <div id="grid" class="grid"></div>
+    </main>
+    
+    <nav class="bottom">
+      <a class="btab" href="mobile.html"><div class="ico">📱</div>Mobile</a>
+      <a class="btab" href="new-phones.html"><div class="ico">🆕</div>New</a>
+      <a class="btab active" href="second-phones.html"><div class="ico">♻️</div>Second</a>
+    </nav>
+    
+    <script src="assets/app.js"></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+      import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+      const app=initializeApp({apiKey:"AIzaSyC2tsSd3o7QkBu8dhYVLrvVsGUJxBhKQZk",authDomain:"l7-digital-hub.firebaseapp.com",projectId:"l7-digital-hub",storageBucket:"l7-digital-hub.firebasestorage.app",messagingSenderId:"103483875623",appId:"1:103483875623:web:4057e34f23edd51e02c902",measurementId:"G-X2CCL0YB6P"});
+      const db=getFirestore(app);
+    
+      async function listSecond(){
+        const q=query(collection(db,'products'), where('category','==','mobile'), where('condition','==','second'), orderBy('createdAt','desc'));
+        const snap=await getDocs(q); return snap.docs.map(d=>({id:d.id,...d.data()}));
+      }
+      const grid = document.getElementById('grid');
+      const card = (p)=>`
+        <div class="card">
+          <a href="product.html?id=${encodeURIComponent(p.id)}">
+            <img src="${p.image}" alt=""><div class="name">${p.name}</div>
+          </a>
+          <div><span class="price">₹${(p.price||0).toLocaleString()}</span><span class="mrp">₹${(p.mrp||0).toLocaleString()}</span></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <a class="btn ghost" href="product.html?id=${encodeURIComponent(p.id)}" style="flex:1;text-align:center">View</a>
+            <button class="btn" data-add data-product='${JSON.stringify({id:p.id,name:p.name,price:p.price,mrp:p.mrp,image:p.image})}' style="flex:1">Add to Cart</button>
+          </div>
+        </div>`;
+      (async ()=>{ const list=await listSecond(); grid.innerHTML=list.map(card).join('')||'<div class="hint" style="padding:12px 16px">No second phones.</div>'; bindAddButtons(grid); })();
+    </script>
+    </body></html>
+    

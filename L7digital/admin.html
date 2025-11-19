@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L7 Digital Hub — Admin</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .admin-wrap{max-width:860px;margin:14px auto 96px;padding:0 16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px;border-bottom:1px solid #eef2ff;text-align:left;font-size:14px}
+    .chip{background:#eef2ff;border:1px solid #e6eaff;border-radius:999px;padding:4px 8px;font-size:12px}
+    .ghost{background:#fff;border:1px solid #e5e7eb;color:#111}
+    .danger{background:#ef4444;color:#fff}
+    .card{background:#fff;border:1px solid #eef2ff;border-radius:18px;box-shadow:0 8px 24px rgba(17,24,39,.08);padding:14px}
+    .card h3{margin:0 0 8px}
+    input,select{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px}
+  </style>
+</head>
+<body>
+<header class="appbar">
+  <div class="brandline">
+    <a class="logo" href="index.html">L7</a>
+    <div><div class="title">Admin Dashboard</div><div class="subtitle">Firestore products</div></div>
+    <a class="iconbtn" style="margin-left:auto" href="index.html">🏠</a>
+  </div>
+</header>
+
+<main class="admin-wrap">
+  <!-- Add / Edit form -->
+  <section class="card">
+    <h3 id="form-title">Add Product</h3>
+    <form id="prod-form" class="row">
+      <input type="hidden" name="id" />
+      <label>Name<input name="name" required placeholder="e.g., L7 Nova 5G"></label>
+      <label>Category
+        <select name="category" required>
+          <option value="mobile">mobile</option>
+          <option value="laptop">laptop</option>
+          <option value="pouches">pouches</option>
+          <option value="electronics">electronics</option>
+        </select>
+      </label>
+      <label>Condition
+        <select name="condition" required>
+          <option value="new">new</option>
+          <option value="second">second</option>
+        </select>
+      </label>
+      <label>Price (₹)<input name="price" type="number" min="0" required></label>
+      <label>MRP (₹)<input name="mrp" type="number" min="0" required></label>
+      <label class="row" style="grid-column:1/-1">Image URL
+        <input name="image" required placeholder="https://...">
+      </label>
+      <div class="row-3" style="grid-column:1/-1">
+        <button class="btn" type="submit">Save</button>
+        <button id="reset-btn" class="btn ghost" type="button">Reset</button>
+        <button id="seed-btn" class="btn ghost" type="button">Load Demo</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Filter + list -->
+  <section class="card" style="margin-top:14px">
+    <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+      <div>
+        <span class="chip">All Products</span>
+        <select id="cat-filter" class="chip">
+          <option value="all">All</option>
+          <option value="mobile">mobile</option>
+          <option value="laptop">laptop</option>
+          <option value="pouches">pouches</option>
+          <option value="electronics">electronics</option>
+        </select>
+        <select id="cond-filter" class="chip">
+          <option value="all">any condition</option>
+          <option value="new">new</option>
+          <option value="second">second</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="overflow:auto;margin-top:10px">
+      <table class="table" id="prod-table">
+        <thead><tr><th>Name</th><th>Category</th><th>Condition</th><th>Price</th><th>MRP</th><th>Image</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom">
+  <a class="btab" href="index.html"><div class="ico">🏠</div>Home</a>
+  <a class="btab active" href="admin.html"><div class="ico">🧑‍💼</div>Admin</a>
+</nav>
+
+<!-- Firebase (ESM CDN) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc,
+    query, where, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+  /* === Your Firebase project === */
+  const firebaseConfig = {
+    apiKey: "AIzaSyC2tsSd3o7QkBu8dhYVLrvVsGUJxBhKQZk",
+    authDomain: "l7-digital-hub.firebaseapp.com",
+    projectId: "l7-digital-hub",
+    storageBucket: "l7-digital-hub.firebasestorage.app",
+    messagingSenderId: "103483875623",
+    appId: "1:103483875623:web:4057e34f23edd51e02c902",
+    measurementId: "G-X2CCL0YB6P"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  /* === UI refs === */
+  const form = document.getElementById('prod-form');
+  const resetBtn = document.getElementById('reset-btn');
+  const seedBtn  = document.getElementById('seed-btn');
+  const tableBody = document.querySelector('#prod-table tbody');
+  const catFilter = document.getElementById('cat-filter');
+  const condFilter = document.getElementById('cond-filter');
+  const formTitle = document.getElementById('form-title');
+
+  /* === Helpers === */
+  function fillForm(p){
+    formTitle.textContent = p ? 'Edit Product' : 'Add Product';
+    form.id.value = p?.id || '';
+    form.name.value = p?.name || '';
+    form.category.value = (p?.category||'mobile').toLowerCase();
+    form.condition.value = (p?.condition||'new').toLowerCase();
+    form.price.value = p?.price ?? '';
+    form.mrp.value = p?.mrp ?? '';
+    form.image.value = p?.image ?? '';
+  }
+
+  async function listProducts(){
+    let ref = collection(db, 'products');
+    const filters = [];
+    if(catFilter.value !== 'all') filters.push(where('category', '==', catFilter.value));
+    if(condFilter.value !== 'all') filters.push(where('condition','==', condFilter.value));
+    let qRef = filters.length ? query(ref, ...filters) : ref;
+    try {
+      qRef = query(qRef, orderBy('createdAt','desc'));
+    } catch(_) { /* createdAt may not exist yet; ignore orderBy */ }
+    const snap = await getDocs(qRef);
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }
+
+  async function drawTable(){
+    const list = await listProducts();
+    tableBody.innerHTML = list.map(p=>`
+      <tr>
+        <td>${p.name}</td>
+        <td><span class="chip">${p.category||''}</span></td>
+        <td><span class="chip">${p.condition||'new'}</span></td>
+        <td>₹${(p.price||0)}</td>
+        <td>₹${(p.mrp||0)}</td>
+        <td><a href="${p.image}" target="_blank">image</a></td>
+        <td>
+          <button class="btn ghost" data-edit="${p.id}">Edit</button>
+          <button class="btn danger" data-del="${p.id}">Delete</button>
+        </td>
+      </tr>
+    `).join('') || `<tr><td colspan="7">No products yet.</td></tr>`;
+  }
+
+  /* === Form submit === */
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    const payload = {
+      name: data.name.trim(),
+      category: data.category.toLowerCase(),
+      condition: (data.condition||'new').toLowerCase(),
+      price: Number(data.price||0),
+      mrp: Number(data.mrp||0),
+      image: data.image.trim(),
+      createdAt: serverTimestamp()
+    };
+
+    if(data.id){
+      await updateDoc(doc(db,'products',data.id), payload);
+      alert('Updated!');
+    }else{
+      await addDoc(collection(db,'products'), payload);
+      alert('Added!');
+    }
+    fillForm(null);
+    drawTable();
+  });
+
+  /* === Actions in table === */
+  tableBody.addEventListener('click', async (e)=>{
+    const editId = e.target.getAttribute('data-edit');
+    const delId  = e.target.getAttribute('data-del');
+    if(editId){
+      // fetch row values from DOM quickly (you could re-read from Firestore)
+      const row = e.target.closest('tr').children;
+      fillForm({
+        id: editId,
+        name: row[0].textContent,
+        category: row[1].innerText,
+        condition: row[2].innerText,
+        price: Number(row[3].textContent.replace(/[₹,]/g,'')),
+        mrp: Number(row[4].textContent.replace(/[₹,]/g,'')),
+        image: row[5].querySelector('a').getAttribute('href')
+      });
+    }
+    if(delId){
+      if(confirm('Delete this product?')){
+        await deleteDoc(doc(db,'products',delId));
+        drawTable();
+      }
+    }
+  });
+
+  /* === Filters, reset, seed === */
+  catFilter.addEventListener('change', drawTable);
+  condFilter.addEventListener('change', drawTable);
+  resetBtn.addEventListener('click', ()=> fillForm(null));
+  seedBtn.addEventListener('click', async ()=>{
+    const demo = [
+      {name:'L7 Nova 5G (6/128)',  category:'mobile',      condition:'new',    price:15999, mrp:19999, image:'https://picsum.photos/seed/m1/600/400'},
+      {name:'iPhone 13 — Refurb',  category:'mobile',      condition:'second', price:32999, mrp:39999, image:'https://picsum.photos/seed/m3/600/400'},
+      {name:'SlimBook i5 16/512',  category:'laptop',      condition:'new',    price:49990, mrp:62990, image:'https://picsum.photos/seed/l1/600/400'},
+      {name:'Clear Soft Case',     category:'pouches',     condition:'new',    price:199,   mrp:299,   image:'https://picsum.photos/seed/p1/600/400'},
+      {name:'Soundbar 120W',       category:'electronics', condition:'new',    price:5999,  mrp:7999,  image:'https://picsum.photos/seed/e1/600/400'}
+    ];
+    for(const p of demo){ await addDoc(collection(db,'products'), {...p, createdAt: serverTimestamp()}); }
+    alert('Demo added'); drawTable();
+  });
+
+  // init
+  fillForm(null);
+  drawTable();
+</script>
+</body>
+</html>

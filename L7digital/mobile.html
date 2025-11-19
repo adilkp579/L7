@@ -1,0 +1,112 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L7 Digital Hub — Mobile</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .btn-group{display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 8px}
+    .btn.small{padding:8px 12px;border-radius:10px;font-weight:700}
+  </style>
+  </head>
+  <body>
+    <header class="appbar">
+      <div class="brandline">
+        <div class="logo">L7</div>
+        <div><div class="title">L7 Digital Hub</div><div class="subtitle">Deals you’ll love</div></div>
+        <a class="iconbtn" style="margin-left:auto;position:relative" href="cart.html">🛒
+          <span id="cart-badge" class="cart-badge" style="display:none">0</span>
+        </a>
+      </div>
+      <div class="search"><span>🔍</span><input placeholder="Search mobiles, laptops, pouches..."><a class="" href=""></a></div>
+    </header>
+    
+    <nav class="cat-strip">
+      <a class="cat" data-key="for-you" href="index.html"><div class="bubble">🛍️</div><span>For You</span></a>
+      <a class="cat" data-key="mobile" href="mobile.html"><div class="bubble">📱</div><span>Mobile</span></a>
+      <a class="cat" data-key="laptop" href="laptop.html"><div class="bubble">💻</div><span>Laptop</span></a>
+      <a class="cat" data-key="pouches" href="pouches.html"><div class="bubble">👜</div><span>Pouches</span></a>
+      <a class="cat" data-key="electronics" href="electronics.html"><div class="bubble">🔌</div><span>Electronics</span></a>
+      <a class="cat" data-key="services" href="services.html"><div class="bubble">🛠️</div><span>Service</span></a>
+    </nav>
+    
+  
+  <main class="container">
+    <section class="section">
+      <div class="btn-group">
+        <button id="btn-new"    class="btn small">New Phones</button>
+        <button id="btn-second" class="btn small ghost">Second Phones</button>
+      </div>
+    </section>
+  
+    <section class="section"><div class="h1" id="heading">New Phones</div></section>
+    <div id="grid" class="grid"></div>
+  </main>
+  
+  <script src="assets/app.js"></script>
+  
+  <!-- Firestore -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+  
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2tsSd3o7QkBu8dhYVLrvVsGUJxBhKQZk",
+      authDomain: "l7-digital-hub.firebaseapp.com",
+      projectId: "l7-digital-hub",
+      storageBucket: "l7-digital-hub.firebasestorage.app",
+      messagingSenderId: "103483875623",
+      appId: "1:103483875623:web:4057e34f23edd51e02c902",
+      measurementId: "G-X2CCL0YB6P"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+  
+    const grid = document.getElementById('grid');
+    const heading = document.getElementById('heading');
+    const btnNew = document.getElementById('btn-new');
+    const btnSecond = document.getElementById('btn-second');
+  
+    function setActive(which){
+      [btnNew, btnSecond].forEach(b=>b.classList.add('ghost'));
+      which.classList.remove('ghost');
+    }
+  
+    async function listMobiles(condition){ // 'new' | 'second'
+      let ref = collection(db, 'products');
+      let qRef = query(ref, where('category','==','mobile'), where('condition','==',condition));
+      try{ qRef = query(qRef, orderBy('createdAt','desc')); }catch(_){}
+      const snap = await getDocs(qRef);
+      return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    }
+  
+    const card = (p)=>`
+      <div class="card">
+        <a href="product.html?id=${encodeURIComponent(p.id)}">
+          <img src="${p.image}" alt="">
+          <div class="name">${p.name}</div>
+        </a>
+        <div><span class="price">₹${(p.price||0).toLocaleString()}</span>
+             <span class="mrp">₹${(p.mrp||0).toLocaleString()}</span></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <a class="btn ghost" href="product.html?id=${encodeURIComponent(p.id)}" style="flex:1;text-align:center">View</a>
+          <button class="btn" data-add data-product='${JSON.stringify({id:p.id,name:p.name,price:p.price,mrp:p.mrp,image:p.image})}' style="flex:1">Add to Cart</button>
+        </div>
+      </div>`;
+  
+    async function render(condition){
+      heading.textContent = condition==='second' ? 'Second Phones' : 'New Phones';
+      grid.innerHTML = '<div class="hint" style="padding:12px 16px">Loading…</div>';
+      const list = await listMobiles(condition);
+      grid.innerHTML = list.map(card).join('') || '<div class="hint" style="padding:12px 16px">No mobiles found.</div>';
+      if(window.bindAddButtons) window.bindAddButtons(grid);
+      if(window.Cart) window.Cart.updateBadge();
+    }
+  
+    // default tab = New
+    setActive(btnNew);
+    render('new');
+  
+    btnNew.addEventListener('click',   ()=>{ setActive(btnNew);   render('new'); });
+    btnSecond.addEventListener('click',()=>{ setActive(btnSecond); render('second'); });
+  </script>
+  </body></html>
+  
